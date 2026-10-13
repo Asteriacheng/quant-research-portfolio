@@ -1,0 +1,20 @@
+{
+  "research_window": [
+    "2021-01-01",
+    "2025-12-31"
+  ],
+  "exploration_only_through": "2023-12-29",
+  "reserved_test_window": [
+    "2024-01-01",
+    "2025-12-31"
+  ],
+  "signal": "calendar-date close; execute next observed session open; exit at open after five further sessions",
+  "source_adjusted_prices": true,
+  "dividend_cash_return": "not included: source has no cash-dividend/announcement records",
+  "limit_executable_filter": "not applied: source has no daily suspension/ST/listing status; missing OHLC rows are excluded",
+  "costs": "not included in this signal diagnostic; turnover/cost assumptions are in docs/research_plan.md",
+  "n_rows": 5504248,
+  "n_codes": 4902,
+  "n_sessions": 1212,
+  "source_file": "daily_2021_2025.parquet"
+}
