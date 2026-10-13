@@ -1,0 +1,20 @@
+{
+  "source": "https://github.com/newbiestring-lang/astock",
+  "source_commit": "0babe4cf6c1a175c6b84add10803b4b1f9c6000c",
+  "retrieved_at_utc": "2026-10-13T16:03:54.845005+00:00",
+  "study_start": "2021-01-01",
+  "study_end": "2025-12-31",
+  "rows": 5504248,
+  "codes": 4902,
+  "sha256": "39064ceafed448bfaadf65f1c480db8ac7cd0ef4f80ad1e32011044d780e1a43",
+  "source_files": {
+    "index_sh.parquet": "f99977d9920a9f7a0a8b7547a0180a6822a39a25ff52ba100a9971964d8c166b",
+    "kline_000.parquet": "0b7731054224a0310e6380cd2dd7413dac9931423218b2926418f69291c48b30",
+    "kline_002.parquet": "f7e09d35183863f66ac5f72edf28135d59a0eb6577ca12720acfaf1855cc800e",
+    "kline_300.parquet": "d37c435458dfeecf5fef9324613cf0783e39c71b641f6b2e14d21d2eee3c81f3",
+    "kline_600.parquet": "c9160524f8ba01c68a5b4cefb77a0ba93fbe290d9b73da357ac2e3a39a923ca0",
+    "kline_688.parquet": "cbb03db8c8b37b5289b9f665fb1c1b67a9b913d7eb3c4d7dbd93f2e3d0e8ea66",
+    "kline_other.parquet": "ea0fb9ab20afe1cdae012c774a9817df81c2dadc726a58b2e29390e89c69968f",
+    "stock_list.parquet": "a1817eb8d9d063d8b13ec038000830c71d374cc8cb982006004036fae21f0d33"
+  }
+}
