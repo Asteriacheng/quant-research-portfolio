@@ -1,0 +1,38 @@
+{
+  "source_file": "daily_2021_2025.parquet",
+  "signal_date": "last observed trading session close of month",
+  "execution": "next calendar month's first observed open; exit at that month's last observed open",
+  "return_label": "non-overlapping next-calendar-month open-to-open adjusted-price return",
+  "universe": "securities with source rows; not historical full listing universe",
+  "benchmark": "Shanghai Composite open-to-open over same next-month interval",
+  "industry_sensitivity": "static 2026 snapshot sector labels; exploratory only, not point-in-time",
+  "size_control": "not run: source has no market capitalization/shares outstanding history",
+  "corporate_actions": "source prices are forward-adjusted; no separate cash dividend was added",
+  "missing_exit": "if any selected holding lacks a monthly price observation, monthly strategy return is NA; count retained; no forced liquidation assumed",
+  "execution_limits": "no historical ST, suspension, limit-up/down or delisting state; costs are assumptions",
+  "cost_assumptions": {
+    "commission_bps_per_side": 3,
+    "slippage_bps_per_side_scenarios": [
+      5,
+      10,
+      20
+    ],
+    "stamp_sell_bps": "10 before 2023-08-28, 5 from 2023-08-28; official reduction notice linked in research plan"
+  },
+  "static_industry_rows": 3689,
+  "development_screen_rule": "positive 2021-2023 overlapping-label mean Rank IC and Newey-West t >= 1.96; remove pairs with absolute mean monthly cross-sectional rank correlation >= 0.70",
+  "selected_development_factors": [
+    "turnover_20d",
+    "volume_volatility_20d",
+    "reversal_5d"
+  ],
+  "composite": "equal-weight average of within-month percentile ranks; requires all selected component signals; no fitted weights",
+  "sensitivity": "tested 60-day turnover/volume windows and 10-day reversal; quarterly rebalancing evaluated separately; these variants do not alter the frozen monthly composite",
+  "securities": 4902,
+  "signal_months": 60,
+  "test_window": [
+    "2024-01",
+    "2025-12"
+  ],
+  "confirmatory_limit": "No strategy claims until a point-in-time universe, status, size and classification history is obtained."
+}
