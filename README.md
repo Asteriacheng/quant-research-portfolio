@@ -185,6 +185,19 @@ panel = Panel.from_csv_dir("你的 CSV 目录")
 CSV 要求:每只股票一个文件,文件名即代码,包含列 `date, open, high, low, close, volume, amount`。
 `volume` 单位为股(不是手)。
 
+## 真实 A 股行情案例（新增）
+
+项目新增了一个独立的公开行情研究案例：从固定版本的 [newbiestring-lang/astock](https://github.com/newbiestring-lang/astock) 获取 A 股日频行情，重算流动性、换手、反转、成交量波动率和动量因子，并采用保留 2024–2025 的测试区间。代码、口径、输入来源限制及首轮结果见 `docs/research_plan.md` 与 `reports/real_data_v1/`。
+
+```bash
+pip install -r requirements-real.txt
+python data/fetch_real_data.py
+python scripts/run_real_study.py
+python scripts/make_figures.py
+```
+
+行情与处理后 Parquet 不提交到 Git；下载脚本固定上游 commit 并记录 SHA256，原始数据须按上游项目的许可与使用条款获取。该数据不包含现金分红公告、历史 ST/停牌/退市状态或历史行业/市值，因此这一案例是价格成交量因子诊断，不是股息因子研究，也不是无幸存者偏差的实盘回测。现有合成案例继续保留，仅用于单元测试。
+
 ---
 
 <a name="english"></a>

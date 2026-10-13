@@ -130,3 +130,9 @@ dmypy.json
 .env.local
 *.csv.bak
 *.parquet.bak
+
+# Public research data is fetched from the pinned source snapshot by data/fetch_real_data.py.
+# Keep bulky source and derived parquet files local; commit only scripts and hash manifests.
+data/raw/astock/*.parquet
+data/processed/*.parquet
+data/raw/astock/CLONE_CONFIG.txt
