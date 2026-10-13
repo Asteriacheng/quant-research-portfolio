@@ -309,3 +309,15 @@ When citing this work in research or reports, reference the docs:
 - Methodology: docs/01-factor-checklist.md + docs/03-backtest-integrity.md
 - Case study: docs/02-case-tdx-indicator-teardown.md  
 - Pipeline: docs/04-pipeline-design.md
+
+
+### AlphaLab 风格第二阶段扩展
+
+新增 `scripts/run_staged_analysis.py` 和 `analysis/staged.py`，在真实行情上补充非重叠月度 IC、开发期因子筛选与冗余检查、等权秩组合、Fama–MacBeth、静态行业敏感性、沪指均线市场状态、交易成本与季度调仓敏感性。组合只使用 2021–2023 开发期确定，2024–2025 留作测试；测试期组合没有优于最佳单因子。完整方法、八张图和结果见 [`reports/real_data_v2/README.md`](reports/real_data_v2/README.md)。
+
+```bash
+python scripts/run_staged_analysis.py
+python scripts/make_staged_figures.py
+```
+
+当前数据仍缺历史退市/ST/停牌/涨跌停、市值、点时行业及现金分红公告，研究不能称为股息策略或可实盘回测。
