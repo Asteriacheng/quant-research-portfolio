@@ -1,74 +1,94 @@
-# A股因子研究
+# A-Share Factor Research
 
-这个仓库包含因子检验代码、A股行情因子案例，以及一个尚待真实分红数据输入的股息率研究框架。所有研究结果都应和对应的数据口径一起阅读。
+This repository contains Python tools for factor diagnostics, A-share price/volume research, an offline dividend-yield study framework, and optional walk-forward machine-learning code.
+本仓库包含因子检验工具、A 股价量研究、离线股息率研究框架，以及可选的机器学习滚动预测代码。
 
-## 仓库里有什么
+## Project contents / 项目内容
 
-- `factorkit/`：IC、换手、衰减、事件研究和数据完整性检查。
-- `factors/`：价量因子、股息率因子和低波因子。
-- `analysis/`：分组收益、Fama–MacBeth、成本回测及多因子诊断。
-- `ml/`：XGBoost / LightGBM walk-forward 复合因子代码。需要单独安装 ML 依赖。
-- `scripts/`：研究运行和图表导出脚本。
-- `data/templates/`：离线股息研究输入格式和空白 CSV 表头。
-- `docs/`：研究方法、数据口径和运行说明。
-- `reports/real_data_v1/`、`reports/real_data_v2/`：价量因子研究的输出文件。
+- `factorkit/`: IC, turnover, decay, event-study, and data-integrity utilities.  
+  `factorkit/`：IC、换手、衰减、事件研究和数据完整性工具。
+- `factors/`: price/volume, dividend-yield, and low-volatility factor calculations.  
+  `factors/`：价量、股息率和低波因子计算。
+- `analysis/`: portfolio sorts, Fama–MacBeth regressions, cost scenarios, and multifactor diagnostics.  
+  `analysis/`：分组收益、Fama–MacBeth 回归、成本情景和多因子诊断。
+- `ml/`: optional XGBoost / LightGBM walk-forward model.  
+  `ml/`：可选的 XGBoost / LightGBM 滚动训练模型。
+- `scripts/`: runnable research and chart-generation scripts.  
+  `scripts/`：研究运行和图表生成脚本。
+- `data/templates/`: offline dividend-study input schemas.  
+  `data/templates/`：离线股息研究的数据字段说明和 CSV 表头模板。
+- `docs/`: methods, data requirements, and run instructions.  
+  `docs/`：研究方法、数据要求和运行说明。
+- `reports/real_data_v1/` and `reports/real_data_v2/`: outputs from the price/volume studies.  
+  `reports/real_data_v1/` 和 `reports/real_data_v2/`：价量因子研究输出。
 
-## 当前研究状态
+## Current status / 当前状态
 
-**价量因子：** 仓库包含基于 A 股历史行情的单因子和组合分析输出。行情案例缺少历史退市、ST、停牌、涨跌停及点时行业/市值信息，因此结果不能直接理解成可成交的完整市场回测。
+**Price/volume factors.** The repository includes single-factor and portfolio analyses using historical A-share market data. The available data lacks historical delisted names, ST and suspension status, limit-price execution flags, and point-in-time industry and market-cap classifications. The results should not be read as a fully executable market backtest.  
+**价量因子：** 仓库包含基于 A 股历史行情的单因子和组合分析。现有数据缺少历史退市股票、ST 和停牌状态、涨跌停成交标记，以及点时行业和市值分类，因此结果不等同于完整可成交回测。
 
-**股息率与低波：** 已实现公告版本时点约束、股息率计算、低波因子、等权秩组合、IC、五分组、Fama–MacBeth、成本情景和调仓频率敏感性。当前仓库没有点时分红版本数据和未复权价格，尚未生成这部分的实证结果。
+**Dividend yield and low volatility.** The code calculates a point-in-time trailing cash yield and low-volatility signal, then provides rank combination, IC, quintile, Fama–MacBeth, cost, and rebalance-frequency analyses. The repository does not contain versioned dividend-event history or unadjusted prices, so this study has no empirical results yet.  
+**股息率与低波：** 代码实现了点时现金股息率和低波信号，并提供秩组合、IC、五分组、Fama–MacBeth、成本及调仓频率分析。仓库尚无分红公告版本历史和未复权价格，因此这部分还没有实证结果。
 
-**机器学习：** 已实现可选的 XGBoost / LightGBM walk-forward 流程，包括开发期滚动验证、留出期参数冻结、逐月训练预测、Rank IC 和特征重要性输出。目前没有训练输入数据，也没有生成模型表现结果。具体输入、时间切分和限制见 [`docs/machine_learning.md`](docs/machine_learning.md)。
+**Machine learning.** The optional XGBoost / LightGBM pipeline selects settings using rolling validation before the holdout, freezes those settings, and generates monthly walk-forward predictions with Rank IC and feature-importance outputs. No factor panel has been supplied and no model-performance result has been generated. See [the ML instructions](docs/machine_learning.md).  
+**机器学习：** 可选的 XGBoost / LightGBM 流程使用留出期之前的滚动验证选择参数，在留出期固定参数并逐月预测，输出 Rank IC 和特征重要性。目前尚无输入因子面板，也没有模型表现结果。运行说明见[机器学习文档](docs/machine_learning.md)。
 
-## 环境与测试
+## Setup and tests / 环境与测试
 
-基础因子检验使用 Python、pandas、numpy 和 scipy。运行单元测试：
+Install the base dependencies and run the unit tests:
+安装基础依赖并运行单元测试：
 
 ```bash
 pip install pandas numpy scipy
 python -m unittest discover -s tests -t .
 ```
 
-当前单元测试为 36 项，覆盖计算逻辑和时间切分；通过测试不代表因子在真实市场有效。
+The current suite has 36 tests covering calculations and time-split behavior. Passing unit tests checks code behavior; it does not establish that a factor works in the market.  
+当前共有 36 项单元测试，覆盖计算逻辑和时间切分。测试通过只说明代码行为符合预期，不代表因子在真实市场有效。
 
-机器学习依赖单独安装，避免不用 ML 时安装额外包：
+Machine-learning libraries are optional. Install them only if you plan to run that pipeline:
+机器学习库为可选依赖；需要运行 ML 流程时再安装：
 
 ```bash
 pip install -r requirements-ml.txt
 ```
 
-## 运行机器学习因子
+## Run the ML pipeline / 运行机器学习流程
 
-准备本地输入文件（不会提交到 Git）：
+Prepare local CSV files; files under `data/manual_ml/` are ignored by Git:
+准备本地 CSV 文件；`data/manual_ml/` 下的文件会被 Git 忽略：
 
-- `data/manual_ml/factors.csv`：`date,code` 加一列或多列因子值，例如 `dividend_yield,low_volatility,quality,momentum`。
-- `data/manual_ml/forward_returns.csv`：`date,code,forward_return`。标签日期必须对应因子信号日期，收益从信号之后可成交的价格开始计算。
+- `factors.csv`: one row per `date,code`, with one column per point-in-time factor, such as dividend yield, low volatility, quality, or momentum.  
+  `factors.csv`：每个 `date,code` 一行，每个点时因子一列，例如股息率、低波、质量或动量。
+- `forward_returns.csv`: one row per `date,code` with a `forward_return` label that starts after the signal can be traded.  
+  `forward_returns.csv`：每个 `date,code` 一行，包含 `forward_return`；收益区间必须从信号之后可成交的价格开始。
 
-运行：
+Run the model:
+运行模型：
 
 ```bash
 python scripts/run_ml_factor.py --model xgboost --split-date 2024-01-01
-# 也可以使用 --model lightgbm
+# Or use --model lightgbm
+# 也可以将模型设为 lightgbm
 ```
 
-脚本默认使用 `data/manual_ml/`，输出到 `reports/ml_factor/`。它先在留出期之前的滚动验证窗口选择参数；进入留出期后固定参数，每个信号月只用当时已经有完整收益标签的历史样本重新训练。训练期的缩尾边界和缺失值填补值不会从验证或预测样本估计。
+The script reads from `data/manual_ml/` and writes predictions, monthly Rank IC, quintile returns, a costed portfolio, feature importance, parameter-selection scores, and run metadata to `reports/ml_factor/`.  
+脚本从 `data/manual_ml/` 读取数据，并将预测值、月度 Rank IC、五分组收益、含成本组合、特征重要性、参数选择结果和运行信息写入 `reports/ml_factor/`。
 
-## 股息研究输入
+## Run the dividend study / 运行股息研究
 
-股息研究不连接行情数据 API，输入为本地 CSV。字段、公告版本和价格要求见 [`data/templates/README.md`](data/templates/README.md)。输入准备好后运行：
+The dividend workflow reads local CSV files and does not call a market-data API. See [the input specification](data/templates/README.md), then run:
+股息研究读取本地 CSV，不调用行情数据 API。先查看[输入字段说明](data/templates/README.md)，然后运行：
 
 ```bash
 python scripts/run_dividend_multifactor.py
 python scripts/make_dividend_figures.py
 ```
 
-月度信号区间为 2021–2025，最后 24 个信号月留作测试。为生成完整的季度调仓敏感性，价格数据需延伸到 2026 年 3 月。没有符合条件的分红版本和未复权价格时，脚本会停止并提示缺失文件，不会生成模拟市场结果。
+Signals cover 2021–2025, with the final 24 signal months reserved for testing. Complete quarterly-frequency sensitivity requires price data through March 2026. If the versioned dividend history or raw prices are missing, the runner stops without generating market results.  
+信号区间为 2021–2025，最后 24 个信号月留作测试。完整的季度调仓敏感性需要截至 2026 年 3 月的行情。缺少分红公告版本历史或未复权价格时，脚本会停止，不会生成市场结果。
 
-## 研究边界
+## Limitations / 研究限制
 
-当前数据和程序尚未构成完整实盘回测：历史股票池和退市处理、ST/停牌/涨跌停成交限制、历史行业与市值中性，以及点时财务质量因子都需要对应的历史数据。机器学习模块也只提供模型研究流程；在真实输入通过质量检查并运行之前，不报告预测收益或策略业绩。
-
-## English
-
-Python research code for A-share factor diagnostics. The repository includes price/volume research outputs, an offline dividend-yield and low-volatility framework, and optional walk-forward XGBoost/LightGBM code. Dividend and ML empirical results are not available until point-in-time inputs are supplied and the pipelines are run. See the Chinese sections above for setup and data requirements.
+The available data and scripts do not yet cover historical universe membership and delistings, ST/suspension/limit-price execution, point-in-time industry and size controls, or publication-date-safe accounting factors. The ML module is implemented but has not been run on real factor inputs. No unobserved strategy return or performance claim is made.  
+现有数据和代码尚未覆盖历史股票池及退市处理、ST/停牌/涨跌停成交、点时行业和市值控制，以及按公告日期构建的财务因子。机器学习模块已实现，但还没有用真实因子数据运行。本文档不声称存在尚未验证的策略收益或业绩。
