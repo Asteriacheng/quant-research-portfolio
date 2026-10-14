@@ -1,63 +1,39 @@
-# Walk-forward ML composite factor
+# 机器学习复合因子
 
-This optional module follows AlphaLab CN's rolling ML-factor idea, adapted to the
-project's date-by-stock factor panels. It is deliberately separate from the ordinary
-IC/Fama–MacBeth workflow and does not call a market-data API.
+这里实现了一个可选的 XGBoost / LightGBM walk-forward 流程，参考 AlphaLab CN 的滚动训练结构，使用本项目的月度因子面板。它只负责模型训练和样本外预测，不负责获取行情或生成质量、估值等原始因子。
 
-## Point-in-time protocol
+## 已实现的步骤
 
-1. `factors.csv` contains only factor values observable at each signal close.
-   `forward_returns.csv` contains the corresponding next-period labels, aligned to
-   the signal date. Never put the target itself into the feature file.
-2. Candidate XGBoost/LightGBM settings are compared using rolling validation folds
-   strictly before `--split-date` (24 development months for training and 6 months
-   for validation by default). Winsorization bounds and missing-value medians are
-   fit on each training fold only.
-3. The selected settings are frozen for the reserved test. For each test signal,
-   model weights are refit on up to the preceding 36 labeled signal months. Earlier
-   test labels can enter later walk-forward fits after those returns become known;
-   they never tune parameters. This is a chronological prequential test, not a claim
-   that the entire holdout is predicted once from a static model.
-4. Output includes stock/date predictions, monthly Rank IC, and per-date tree feature
-   importance. Importance is a model diagnostic, not causal attribution.
+1. 在测试期之前，用滚动的 24 个月训练窗和 6 个月验证窗比较预先列出的参数组合。
+2. 每个测试月固定已选参数，用当时已知标签的最近 36 个月重新训练，再预测当月股票截面。
+3. 缩尾边界和缺失值填补值只从当期训练样本计算。
+4. 输出预测值、逐月 Rank IC、五分组收益、含成本的月度多头组合、特征重要性和验证期参数比较结果。
 
-## Offline input schema
+测试期内已实现的收益标签可以在之后的月份进入训练样本；它们不用于重新选择参数。这是按时间推进的 walk-forward 评估。`feature_importance` 只表示模型如何使用输入列，不代表因果贡献。
 
-Place local files under `data/manual_ml/` (ignored by Git):
+## 输入文件
 
-- `factors.csv`: one row per `date,code`, plus one numeric column per point-in-time
-  feature, for example `dividend_yield,low_volatility,quality,momentum`.
-- `forward_returns.csv`: one row per `date,code`, with a `forward_return` column.
+将文件放在 `data/manual_ml/`，该目录里的 CSV 不会提交到 Git。
 
-The two files must have unique date/code keys and the same signal-date convention.
-Forward labels must begin only after the factor could have been traded. A practical
-monthly convention is month-end close signal and next-month open-to-open return.
-Keep actual historical delisted names in the input where possible. Do not substitute
-the current universe for historical membership.
+- `factors.csv`：每行对应一个 `date,code`，其他列是当日可获得的因子值，如 `dividend_yield,low_volatility,quality,momentum`。
+- `forward_returns.csv`：每行对应一个 `date,code`，包含 `forward_return`。标签从信号之后可成交的价格开始计算。
 
-## Run
+两份文件的 `date,code` 不能重复。`forward_return` 只放在收益文件里，不得作为因子特征。财务质量或估值因子也必须使用当时已公告的数据。尽量保留历史退市股票和当时的股票池；当前成分股回填历史会带来幸存者偏差。
 
-Install the normal project requirements, then only if using ML install the optional
-estimators and invoke:
+## 运行
+
+ML 包是可选依赖，不需要运行机器学习时不用安装：
 
 ```bash
 pip install -r requirements-ml.txt
 python scripts/run_ml_factor.py --model xgboost --split-date 2024-01-01
-# Or: --model lightgbm
+# 或将模型改为 lightgbm
 ```
 
-Results are written to `reports/ml_factor/`: stock/date predictions, monthly Rank IC,
-feature importance and the validation scores/selected parameter set. Missing input
-data or optional estimator dependencies produce an explicit error; no demo/synthetic
-model performance is presented as an A-share result. With a 2021–2025 monthly panel and a 2024 test split,
-the development history is relatively short for hyperparameter selection. Treat the
-ML model as an exploratory composite and compare its test Rank IC and costed portfolio
-with the fixed equal-rank baseline. Do not keep changing the grid after seeing test
-results.
+脚本默认从 `data/manual_ml/` 读取输入，将文件写到 `reports/ml_factor/`。预测区间暂不带基准数据，因此组合报告是绝对收益；成本假设为佣金单边 3bp、滑点单边 10bp、卖出印花税 2023-08-28 前 10bp、此后 5bp。参数表、预测值和评估结果分开保存，便于复核。
 
-## Limitations
+## 当前状态与限制
 
-This module does not fetch source data, establish historical ST/suspension/limit-up
-execution, infer delisting returns, or create point-in-time accounting features.
-Those quality and value features must be supplied with publication-date-safe values.
-The output is factor research, not a production trading system.
+代码和单元测试已经提交，但仓库还没有机器学习所需的点时因子面板和收益标签；可选的 XGBoost / LightGBM 也没有安装。因此目前没有训练记录或真实 A 股 ML 结果。2021–2023 开发期对调参来说较短，结果应与固定等权秩组合对照，并避免根据留出期反复改参数。
+
+这个流程不处理停牌、涨跌停成交、退市收益、历史 ST 状态或历史行业/市值中性。它是研究脚本，不是实盘交易系统。
