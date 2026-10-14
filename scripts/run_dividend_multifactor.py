@@ -22,7 +22,9 @@ from analysis.dividend_multifactor import (equal_weight_rank_composite,
                                            rank_ic_series,
                                            summarize_factor_tests)
 from analysis.extended import fama_macbeth_monthly, newey_west_mean, summarize_fm
-from analysis.staged import cross_sectional_rank_correlations, monthly_long_only_backtest
+from analysis.staged import (cross_sectional_rank_correlations,
+                             monthly_long_only_backtest,
+                             quarterly_long_only_backtest)
 from factors.dividend_factors import trailing_cash_dividend_yield
 from factors.risk_factors import low_volatility
 
@@ -216,6 +218,62 @@ def main() -> None:
                 portfolio_summary.insert(0, "slippage_bps_per_side", slippage)
                 portfolio_summary.insert(0, "factor_name", name)
                 backtest_summaries.append(portfolio_summary)
+
+    # Frequency sensitivity: retain only calendar quarter-end signals and hold
+    # through the next three calendar months. Require a complete Q1-2026 label
+    # for the December-2025 signal, so the quarterly holdout has eight quarters.
+    quarter_dates = pd.DatetimeIndex([
+        date for date in signal_dates if date.month in (3, 6, 9, 12)
+    ])
+    quarterly_returns, quarterly_benchmark = [], {}
+    for signal_date in quarter_dates:
+        months = [signal_date.to_period("M") + offset for offset in (1, 2, 3)]
+        if any(month not in month_first.index for month in months):
+            continue
+        entry, exit_ = month_first.loc[months[0]], month_last.loc[months[-1]]
+        pnl = opn.loc[exit_] / opn.loc[entry] - 1.0
+        cash = final_events.loc[
+            final_events["ex_date"].gt(entry) & final_events["ex_date"].le(exit_)
+        ].groupby("code")["cash_per_share"].sum()
+        for code, amount in cash.items():
+            if code in pnl.index and pd.notna(opn.loc[entry, code]) and opn.loc[entry, code] > 0:
+                pnl.loc[code] += amount / opn.loc[entry, code]
+        quarterly_returns.append((signal_date, pnl))
+        if entry in benchmark.index and exit_ in benchmark.index:
+            quarterly_benchmark[signal_date] = (
+                benchmark.loc[exit_, "open_raw"] / benchmark.loc[entry, "open_raw"] - 1.0
+            )
+        else:
+            quarterly_benchmark[signal_date] = float("nan")
+    quarterly_forward = pd.DataFrame({date: row for date, row in quarterly_returns}).T
+    quarterly_forward = quarterly_forward.reindex(columns=close.columns)
+    quarterly_forward.index = pd.DatetimeIndex(quarterly_forward.index)
+    expected_quarters = sum(date >= split_date for date in quarter_dates)
+    actual_quarters = sum(date >= split_date for date, _ in quarterly_returns)
+    if actual_quarters != expected_quarters:
+        raise SystemExit(
+            f"quarterly sensitivity has {actual_quarters}/{expected_quarters} complete labels; "
+            "include prices through March 2026 for the December 2025 signal"
+        )
+    quarterly_benchmark = pd.Series(quarterly_benchmark, dtype=float)
+    quarterly_summaries = []
+    for name, factor in factors.items():
+        quarter_factor = factor.reindex(quarter_dates)
+        panel, summary = quarterly_long_only_backtest(
+            quarter_factor, quarterly_forward,
+            benchmark_return=quarterly_benchmark, quantile=0.2,
+            commission_bps=3.0, slippage_bps=10.0,
+            stamp_pre_20230828_bps=10.0, stamp_post_20230828_bps=5.0,
+        )
+        panel.insert(0, "factor_name", name)
+        panel.to_csv(OUT / f"backtest_quarterly_{name}.csv", index=False)
+        if not summary.empty:
+            summary.insert(0, "factor_name", name)
+            quarterly_summaries.append(summary)
+    if quarterly_summaries:
+        pd.concat(quarterly_summaries, ignore_index=True).to_csv(
+            OUT / "quarterly_backtest_summary.csv", index=False
+        )
     if fm_rows:
         pd.concat(fm_rows, ignore_index=True).to_csv(OUT / "fama_macbeth_monthly_coefficients.csv", index=False)
     if fm_summaries:
@@ -233,6 +291,7 @@ def main() -> None:
         "development": "signals before 2024-01-01",
         "reserved_test_start": str(split_date.date()),
         "reserved_test": "last 24 observed signal months; rule fixed without inspecting outcomes",
+        "frequency_sensitivity": "quarter-end signals, hold next three full calendar months, same fixed top-quintile rule; requires data through March 2026",
         "factor_selection_and_weights": "none selected from test; equal ranks fixed before test",
         "cost_scenarios": "commission 3bp per side; slippage 5/10/20bp per side; sell tax 10bp before 2023-08-28 then 5bp",
         "input_rows": int(len(prices)),
