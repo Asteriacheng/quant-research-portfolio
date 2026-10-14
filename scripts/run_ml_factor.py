@@ -47,13 +47,14 @@ def main() -> None:
                for name in feature_cols}
     forward = returns_data.pivot(index="date", columns="code", values="forward_return")
     panel = build_factor_panel(factors, forward)
-    predictions, monthly_ic, importance = walk_forward_predict(
+    predictions, monthly_ic, importance, parameter_selection = walk_forward_predict(
         panel, feature_cols, split_date=args.split_date, model_type=args.model
     )
     args.output_dir.mkdir(parents=True, exist_ok=True)
     predictions.to_csv(args.output_dir / "predictions.csv", index=False)
     monthly_ic.to_csv(args.output_dir / "monthly_rank_ic.csv", index=False)
     importance.to_csv(args.output_dir / "feature_importance.csv", index=False)
+    parameter_selection.to_csv(args.output_dir / "parameter_selection.csv", index=False)
     print(monthly_ic.to_string(index=False))
 
 
