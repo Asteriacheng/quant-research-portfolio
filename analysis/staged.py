@@ -62,6 +62,7 @@ def monthly_long_only_backtest(
     slippage_bps: float = 10.0,
     stamp_pre_20230828_bps: float = 10.0,
     stamp_post_20230828_bps: float = 5.0,
+    test_start: str = "2024-01-01",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Top-quantile equal-weight monthly portfolio and summary by return period.
 
@@ -106,8 +107,9 @@ def monthly_long_only_backtest(
         prev_weights = weights
     panel = pd.DataFrame(rows)
     summaries: list[dict[str, object]] = []
-    for period, mask in (("train_2021_2023", panel.signal_month.dt.year <= 2023),
-                         ("test_2024_2025", panel.signal_month.dt.year >= 2024)):
+    split = pd.Timestamp(test_start)
+    for period, mask in (("development", panel.signal_month < split),
+                         ("test", panel.signal_month >= split)):
         p = panel.loc[mask]
         # Compare the benchmark over exactly the months where the portfolio has
         # a complete priced holding set; do not give the benchmark extra months.
