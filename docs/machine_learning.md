@@ -46,9 +46,10 @@ python scripts/run_ml_factor.py --model xgboost --split-date 2024-01-01
 # Or: --model lightgbm
 ```
 
-Results are written to `reports/ml_factor/`. Missing input data or optional estimator
-dependencies produce an explicit error; no demo/synthetic model performance is
-presented as an A-share result. With a 2021–2025 monthly panel and a 2024 test split,
+Results are written to `reports/ml_factor/`: stock/date predictions, monthly Rank IC,
+feature importance and the validation scores/selected parameter set. Missing input
+data or optional estimator dependencies produce an explicit error; no demo/synthetic
+model performance is presented as an A-share result. With a 2021–2025 monthly panel and a 2024 test split,
 the development history is relatively short for hyperparameter selection. Treat the
 ML model as an exploratory composite and compare its test Rank IC and costed portfolio
 with the fixed equal-rank baseline. Do not keep changing the grid after seeing test
