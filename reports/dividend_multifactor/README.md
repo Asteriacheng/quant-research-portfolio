@@ -25,6 +25,8 @@ consume a provider token. Inputs are local CSV files documented in
   common-universe ranking, Rank IC, and quintile sorting.
 - A benchmark-relative top-quintile backtest with 5/10/20 bp per-side slippage
   scenarios, annual/regime summaries, and formula-window sensitivity.
+- Quarterly rebalancing sensitivity: quarter-end signals held over the next three
+  calendar months with the same top-quintile rule and cost assumptions.
 - An eight-chart export script. Figures are generated only from actual pipeline
   outputs, and the test-period boundary is read from run metadata.
 
@@ -49,8 +51,9 @@ python scripts/run_dividend_multifactor.py
 Outputs are written under this directory: monthly IC series and summaries, quintile
 returns, Fama–MacBeth coefficients, factor rank correlation, annual and market-regime
 summaries, formula-window sensitivity, monthly net portfolio returns, and run metadata.
-Then run `python scripts/make_dividend_figures.py` to export eight PNG figures. No
-quarterly sensitivity is currently included in this dividend-specific runner.
+Then run `python scripts/make_dividend_figures.py` to export eight PNG figures. The
+frequency sensitivity also needs daily prices through March 2026 to complete the
+December 2025 signal's next-quarter label.
 Transaction costs use the existing scenario assumptions
 (3 bp commission per side, 10 bp slippage per side, and sell-side stamp tax of 10 bp
 before 2023-08-28 and 5 bp thereafter). They are assumptions, not broker-specific
