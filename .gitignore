@@ -137,3 +137,5 @@ data/raw/astock/*.parquet
 data/processed/*.parquet
 data/raw/astock/CLONE_CONFIG.txt
 data/manual_dividend/*.csv
+
+data/manual_ml/*.csv
