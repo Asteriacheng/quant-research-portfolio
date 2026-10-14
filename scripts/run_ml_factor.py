@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -12,6 +13,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from ml.ml_factor import build_factor_panel, walk_forward_predict
+from analysis.dividend_multifactor import quintile_returns
+from analysis.staged import monthly_long_only_backtest
 
 
 def main() -> None:
@@ -43,6 +46,8 @@ def main() -> None:
     feature_cols = [col for col in factor_data.columns if col not in ("date", "code")]
     if not feature_cols:
         raise SystemExit("factors.csv must contain at least one factor feature column")
+    if "forward_return" in feature_cols:
+        raise SystemExit("Do not put forward_return in factors.csv; it is the prediction target")
     factors = {name: factor_data.pivot(index="date", columns="code", values=name)
                for name in feature_cols}
     forward = returns_data.pivot(index="date", columns="code", values="forward_return")
@@ -55,6 +60,32 @@ def main() -> None:
     monthly_ic.to_csv(args.output_dir / "monthly_rank_ic.csv", index=False)
     importance.to_csv(args.output_dir / "feature_importance.csv", index=False)
     parameter_selection.to_csv(args.output_dir / "parameter_selection.csv", index=False)
+    prediction_panel = predictions.pivot(index="date", columns="code", values="prediction")
+    return_panel = predictions.pivot(index="date", columns="code", values="forward_return")
+    quintiles = quintile_returns(prediction_panel, return_panel)
+    quintiles.to_csv(args.output_dir / "quintile_returns.csv", index=False)
+    portfolio, portfolio_summary = monthly_long_only_backtest(
+        prediction_panel, return_panel, test_start=args.split_date,
+    )
+    portfolio.to_csv(args.output_dir / "portfolio_monthly.csv", index=False)
+    portfolio_summary.to_csv(args.output_dir / "portfolio_summary.csv", index=False)
+    metadata = {
+        "model": args.model,
+        "split_date": args.split_date,
+        "features": feature_cols,
+        "rows": int(len(factor_data)),
+        "test_prediction_rows": int(len(predictions)),
+        "portfolio_cost_assumptions": {
+            "commission_bps_per_side": 3.0,
+            "slippage_bps_per_side": 10.0,
+            "sell_stamp_tax_bps_before_2023_08_28": 10.0,
+            "sell_stamp_tax_bps_after_2023_08_28": 5.0,
+        },
+        "benchmark": "not supplied; portfolio output is absolute-return only",
+    }
+    (args.output_dir / "run_metadata.json").write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print(monthly_ic.to_string(index=False))
 
 
