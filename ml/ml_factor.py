@@ -186,7 +186,7 @@ def select_hyperparameters(
     for config_id, params in enumerate(grid):
         fold_scores = []
         first_end = selection_train_months + validation_months
-        for end_position in range(first_end, len(dev_dates) + 1):
+        for end_position in range(first_end, len(dev_dates) + 1, validation_months):
             windows = rolling_train_validation_dates(
                 dev_dates, end_position, selection_train_months, validation_months
             )
