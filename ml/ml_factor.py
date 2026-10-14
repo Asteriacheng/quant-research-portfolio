@@ -219,7 +219,7 @@ def walk_forward_predict(
     min_valid_names: int = 30,
     random_state: int = 42,
     param_grid: list[dict[str, Any]] | None = None,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Tune only on development data, then produce prequential test predictions.
 
     At a test signal date, the model is refit using up to ``train_months`` prior
@@ -242,6 +242,7 @@ def walk_forward_predict(
         min_valid_names=min_valid_names, random_state=random_state,
         param_grid=param_grid,
     )
+    validation["selected"] = validation.params.eq(repr(chosen))
     train_dates = dates[dates < split]
     predictions, importances = [], []
     for date in dates[dates >= split]:
@@ -274,4 +275,4 @@ def walk_forward_predict(
     ic_rows = []
     for date, group in pred.groupby("date"):
         ic_rows.append({"date": date, "rank_ic": _date_ic(group), "n_stocks": len(group)})
-    return pred, pd.DataFrame(ic_rows), pd.DataFrame(importances)
+    return pred, pd.DataFrame(ic_rows), pd.DataFrame(importances), validation
