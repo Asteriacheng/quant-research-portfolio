@@ -1,334 +1,74 @@
-# factorkit — Single-Factor Validation for A-Share Research
+# A股因子研究
 
-**中文版本见下方** | [English below](#english)
+这个仓库包含因子检验代码、A股行情因子案例，以及一个尚待真实分红数据输入的股息率研究框架。所有研究结果都应和对应的数据口径一起阅读。
 
----
+## 仓库里有什么
 
-## 项目是什么
+- `factorkit/`：IC、换手、衰减、事件研究和数据完整性检查。
+- `factors/`：价量因子、股息率因子和低波因子。
+- `analysis/`：分组收益、Fama–MacBeth、成本回测及多因子诊断。
+- `ml/`：XGBoost / LightGBM walk-forward 复合因子代码。需要单独安装 ML 依赖。
+- `scripts/`：研究运行和图表导出脚本。
+- `data/templates/`：离线股息研究输入格式和空白 CSV 表头。
+- `docs/`：研究方法、数据口径和运行说明。
+- `reports/real_data_v1/`、`reports/real_data_v2/`：价量因子研究的输出文件。
 
-一个**单因子检验工具包**。不负责挖因子,只负责判因子的死活:
-IC / ICIR / 换手 / 成本 / 衰减 / 与池内相关性 / 事件研究 / 前视泄漏排查。
+## 当前研究状态
 
-所有阈值写在文档里,所有结论可复现,没有黑箱。
+**价量因子：** 仓库包含基于 A 股历史行情的单因子和组合分析输出。行情案例缺少历史退市、ST、停牌、涨跌停及点时行业/市值信息，因此结果不能直接理解成可成交的完整市场回测。
 
-核心理念:**一个回测框架靠不靠谱,看它拒绝结果的流程,不看它产生结果的流程。**
+**股息率与低波：** 已实现公告版本时点约束、股息率计算、低波因子、等权秩组合、IC、五分组、Fama–MacBeth、成本情景和调仓频率敏感性。当前仓库没有点时分红版本数据和未复权价格，尚未生成这部分的实证结果。
 
----
+**机器学习：** 已实现可选的 XGBoost / LightGBM walk-forward 流程，包括开发期滚动验证、留出期参数冻结、逐月训练预测、Rank IC 和特征重要性输出。目前没有训练输入数据，也没有生成模型表现结果。具体输入、时间切分和限制见 [`docs/machine_learning.md`](docs/machine_learning.md)。
 
-## 快速开始
+## 环境与测试
+
+基础因子检验使用 Python、pandas、numpy 和 scipy。运行单元测试：
 
 ```bash
 pip install pandas numpy scipy
-
-python examples/run_factor_report.py
-python examples/run_event_study.py
 python -m unittest discover -s tests -t .
 ```
 
-输出在 `examples/sample_output/`。数据是合成的,包含一个已知的 5 日反转 alpha,
-用来验证工具的口径——不是市场结论。
+当前单元测试为 36 项，覆盖计算逻辑和时间切分；通过测试不代表因子在真实市场有效。
 
----
-
-## 文档导航
-
-| 文档 | 内容 |
-|---|---|
-| [docs/01-factor-checklist.md](docs/01-factor-checklist.md) | 单因子研究五关检查清单 + 组合层基础理论 |
-| [docs/02-case-tdx-indicator-teardown.md](docs/02-case-tdx-indicator-teardown.md) | 真实案例:一条商业指标的因子化拆解与判死 |
-| [docs/03-backtest-integrity.md](docs/03-backtest-integrity.md) | 回测防自欺八项校验 + 一次已公开的方法修正 |
-| [docs/04-pipeline-design.md](docs/04-pipeline-design.md) | 选股流水线的四层岗位设计与顺序约束 |
-| [docs/05-research-engineering.md](docs/05-research-engineering.md) | 研究工程纪律:问题台账、冻结指纹、事故复盘 |
-
----
-
-## 代码结构
-
-```
-factorkit/
-├── __init__.py              # 导出所有公开接口
-├── panel.py                 # 面板数据容器 + 合成行情生成器
-├── metrics.py               # IC / ICIR / 换手 / 衰减 / 相关性
-├── event_study.py           # 事件研究 + 机械基线 + 消融
-└── integrity.py             # 前视泄漏探针 + 执行现实性
-
-examples/
-├── run_factor_report.py     # 单因子完整检验报告(合成数据)
-├── run_event_study.py       # 事件研究案例(合成数据)
-└── sample_output/
-    ├── factor_report.md     # 生成的因子报告
-    └── event_study.md       # 生成的事件研究报告
-
-tests/
-├── test_metrics.py          # 20 个单元测试(20/20 pass)
-├── test_event_study.py
-└── test_integrity.py
-```
-
----
-
-## 五关检查顺序(fixed pipeline)
-
-```
-1. 有效性(RankIC / ICIR / t / 单调性 / 方向稳定)
-   ↓ (无效则后面全免)
-2. 换手率(top 组合日换手 < 0.3 较舒服)
-   ↓
-3. 交易成本(年化 = 日换手 × 244 × 双边费率)
-   ↓
-4. Alpha 衰减(因子对 t+k 单日收益的 IC 曲线)
-   ↓
-5. 与池内相关性(|corr| < 0.7 才入池,< 0.3 才算新鲜)
-   ↓
-入池 + 组合层
-```
-
-前一关不过后面全免——不是为了严格,是为了省算力。
-
----
-
-## 关键设计选择
-
-### 1. 可执行口径写死在数据层
-标签一律定义为:**T 日收盘出信号 → T+1 开盘买入 → T+1+H 开盘卖出的超额收益**。
-用 T 日收盘当买入价,回测赚的是一个不存在的成交机会。
-
-实现:
-```python
-from factorkit import forward_return, filter_executable
-
-fwd = forward_return(panel, horizon=5, mode="open_to_open")
-executed = filter_executable(signal, panel)  # 剔除涨停/停牌
-```
-
-### 2. 事件研究必须配机械基线
-裸胜率 > 50% 不代表有 alpha——那段整个市场都在涨。
-对照:同信号日、同股票池、**随机等量抽票**的基线。
-
-实现:
-```python
-from factorkit import event_study, bucketed_event_study
-
-result = event_study(signal, fwd, n_draws=500)
-print(f"净抬升 = {result.net_lift * 100:.2f}pt")  # 信号均值 - 基线均值
-
-# 分市场状态桶,因为整体净抬升为正可能只是因为信号集中在好做的时段
-bucketed = bucketed_event_study(signal, fwd, buckets_by_market_regime, n_draws=200)
-```
-
-### 3. 因子层的前视泄漏用截断不变性判
-打乱标签日期的置换检验在因子层对反转类因子有**结构性假阳性**。
-改用**截断不变性测试**:数据截到某天重算,因子每一格的值必须和全量完全一致。
-
-实现:
-```python
-from factorkit import truncation_invariance
-
-report = truncation_invariance(my_factor_fn, panel, cut_dates)
-assert report["passed"].all(), "有偷看未来的函数"
-```
-
-### 4. 与池内相关性:判「赚的是不是同一笔钱」
-同一条公式拆出来的几个变量往往互相 0.8~0.95 相关,只能留一个。
-正交化用截面回归取残差,残差还有 IC 才算带来新钱。
-
-实现:
-```python
-from factorkit import correlation_with_pool, residualize
-
-corr = correlation_with_pool(new_factor, existing_pool)
-print(corr)  # 如果 |corr| > 0.7 对哪一个,只能二选一
-
-resid = residualize(new_factor, existing_pool)
-ic_resid = ic_summary(rank_ic(resid, fwd))
-# 残差 IC >= 0.015 才算增量
-```
-
----
-
-## 测试
-
-所有测试在合成数据上跑。合成数据**故意埋了一个已知方向的反转 alpha**:
-如果工具测不出来,说明工具坏了,不是数据问题。
+机器学习依赖单独安装，避免不用 ML 时安装额外包：
 
 ```bash
-python -m unittest discover -s tests -t .
-# 预期:33/33 pass
+pip install -r requirements-ml.txt
 ```
 
-关键测试:
-- `test_reversal_ic_is_positive_and_significant`:反转因子必须测出显著为正的 IC
-- `test_leaky_factor_is_caught`:故意偷看未来的因子必须被抓到
-- `test_random_signal_has_no_net_lift`:纯随机信号不该有净抬升
+## 运行机器学习因子
 
----
+准备本地输入文件（不会提交到 Git）：
 
-## 一句话定位
+- `data/manual_ml/factors.csv`：`date,code` 加一列或多列因子值，例如 `dividend_yield,low_volatility,quality,momentum`。
+- `data/manual_ml/forward_returns.csv`：`date,code,forward_return`。标签日期必须对应因子信号日期，收益从信号之后可成交的价格开始计算。
 
-这个工具包的价值不在于「挖到了什么」,而在于**能可信地测量「井有多深」**。
-一个能诚实告诉你「这里没矿」的流程,比一个总能挖到矿的流程值钱得多。
-
----
-
-## 数据输入格式
-
-如果想用真实数据,改写 `examples/run_factor_report.py` 中的:
-
-```python
-# 从这一行:
-panel = make_synthetic_panel(...)
-
-# 改成:
-panel = Panel.from_csv_dir("你的 CSV 目录")
-```
-
-CSV 要求:每只股票一个文件,文件名即代码,包含列 `date, open, high, low, close, volume, amount`。
-`volume` 单位为股(不是手)。
-
-## 真实 A 股行情案例（新增）
-
-项目新增了一个独立的公开行情研究案例：从固定版本的 [newbiestring-lang/astock](https://github.com/newbiestring-lang/astock) 获取 A 股日频行情，重算流动性、换手、反转、成交量波动率和动量因子，并采用保留 2024–2025 的测试区间。代码、口径、输入来源限制及首轮结果见 `docs/research_plan.md` 与 `reports/real_data_v1/`。
+运行：
 
 ```bash
-pip install -r requirements-real.txt
-python data/fetch_real_data.py
-python scripts/run_real_study.py
-python scripts/make_figures.py
+python scripts/run_ml_factor.py --model xgboost --split-date 2024-01-01
+# 也可以使用 --model lightgbm
 ```
 
-行情与处理后 Parquet 不提交到 Git；下载脚本固定上游 commit 并记录 SHA256，原始数据须按上游项目的许可与使用条款获取。该数据不包含现金分红公告、历史 ST/停牌/退市状态或历史行业/市值，因此这一案例是价格成交量因子诊断，不是股息因子研究，也不是无幸存者偏差的实盘回测。现有合成案例继续保留，仅用于单元测试。
+脚本默认使用 `data/manual_ml/`，输出到 `reports/ml_factor/`。它先在留出期之前的滚动验证窗口选择参数；进入留出期后固定参数，每个信号月只用当时已经有完整收益标签的历史样本重新训练。训练期的缩尾边界和缺失值填补值不会从验证或预测样本估计。
 
----
+## 股息研究输入
 
-### 股息率 + 低波多因子研究（离线框架）
-
-新增不调用外部 API 的离线研究入口：先计算受公告版本日期约束的过去 12 个月已实施现金股息率，再与 60 日低波因子做固定等权秩组合。流程包括月度 Rank IC/ICIR 与 Newey–West 统计、五分组收益、单因子及联合 Fama–MacBeth、因子秩相关、年度/市场状态稳定性、公式窗口敏感性、月度与季度调仓对比及成本情景；最后 24 个信号月作为独立测试集。行情通过本地 CSV 输入，不连接数据 API。
+股息研究不连接行情数据 API，输入为本地 CSV。字段、公告版本和价格要求见 [`data/templates/README.md`](data/templates/README.md)。输入准备好后运行：
 
 ```bash
 python scripts/run_dividend_multifactor.py
 python scripts/make_dividend_figures.py
 ```
 
-字段规范与空白模板见 [data/templates/README.md](data/templates/README.md)，方法、限制和当前数据缺口见 [reports/dividend_multifactor/README.md](reports/dividend_multifactor/README.md)。实现位于 `factors/dividend_factors.py`、`factors/risk_factors.py`、`analysis/dividend_multifactor.py`、`scripts/run_dividend_multifactor.py`。目前没有点时分红事件版本和未复权行情输入，所以没有生成股息因子的实证结果；不要把框架或测试数据当成市场结论。2025 年 12 月信号的月度标签需 2026 年 1 月行情，季度敏感性需数据延伸至 2026 年 3 月。
+月度信号区间为 2021–2025，最后 24 个信号月留作测试。为生成完整的季度调仓敏感性，价格数据需延伸到 2026 年 3 月。没有符合条件的分红版本和未复权价格时，脚本会停止并提示缺失文件，不会生成模拟市场结果。
 
-<a name="english"></a>
+## 研究边界
 
-# factorkit — A Small, Honest Single-Factor Validation Toolkit
+当前数据和程序尚未构成完整实盘回测：历史股票池和退市处理、ST/停牌/涨跌停成交限制、历史行业与市值中性，以及点时财务质量因子都需要对应的历史数据。机器学习模块也只提供模型研究流程；在真实输入通过质量检查并运行之前，不报告预测收益或策略业绩。
 
-## What is this
+## English
 
-A minimal Python toolkit for validating cross-sectional stock-picking factors.
-It does **not** generate factors; it judges whether a factor is dead or alive:
-IC / ICIR / turnover / cost / decay / orthogonality / event study / look-ahead audit.
-
-All thresholds are documented, all results are reproducible, no black boxes.
-
-**Core principle: A backtest framework is only as good as its rejection process, not its generative process.**
-
-## Quick start
-
-```bash
-pip install pandas numpy scipy
-python examples/run_factor_report.py
-python examples/run_event_study.py
-python -m unittest discover -s tests -t .
-```
-
-Sample output in `examples/sample_output/`. Data is synthetic, containing one known reversal
-alpha — used to verify the toolkit's correctness, not to draw market conclusions.
-
-## Documentation
-
-- **01-factor-checklist.md**: Five-gate pipeline, numeric thresholds for A-share daily data
-- **02-case-tdx-indicator-teardown.md**: Real case study: a retail TDX indicator deconstructed and killed
-- **03-backtest-integrity.md**: Eight mechanical checks + one method correction I made public
-- **04-pipeline-design.md**: Four-role pipeline architecture (gate, admission, rank, veto)
-- **05-research-engineering.md**: Operating discipline: issue ledger, frozen config fingerprint, incident reviews
-
-## Pipeline (fixed order)
-
-```
-1. Effectiveness (RankIC | ICIR | t-stat | monotonicity | direction stability)
-   → if failed, stop
-2. Turnover (top-10% daily < 0.3)
-3. Cost drag (annual ≈ daily_turnover × 244 × 25bp)
-4. Decay curve (IC against t+k single-day returns)
-5. Correlation with pool (|corr| < 0.7 to enter, < 0.3 to be new)
-   → if passed, enters combination layer
-```
-
-## Key design choices
-
-**1. Executable pricing fixed at data level**
-```python
-fwd = forward_return(panel, horizon=5, mode="open_to_open")
-# T close → T+1 open buy → T+1+H open sell
-executed = filter_executable(signal, panel)  # drops limit-up, suspended
-```
-
-**2. Event study requires mechanical baseline**
-```python
-result = event_study(signal, fwd, n_draws=500)
-# net_lift = signal.mean() - random_baseline.mean()
-bucketed = bucketed_event_study(signal, fwd, market_buckets)
-```
-
-**3. Look-ahead audit via truncation invariance**
-```python
-report = truncation_invariance(my_factor, panel, cut_dates)
-assert report["passed"].all()  # every cell matches after truncation
-```
-
-**4. Orthogonality via residualization**
-```python
-corr = correlation_with_pool(new_factor, existing_pool)
-# if |corr| > 0.7 to any existing factor, choose one
-resid = residualize(new_factor, existing_pool)
-ic_resid = ic_summary(rank_ic(resid, fwd))
-# ic_resid >= 0.015 = "brings new money"
-```
-
-## Tests
-
-33 unit tests, all pass. Synthetic data carries a **known reversal alpha** to verify the toolkit
-can find it — if the toolkit fails, the toolkit is broken, not the data.
-
-```bash
-python -m unittest discover -s tests -t .
-# Expected: 33/33 pass
-```
-
-Key assertions:
-- Reversal factor must show positive significant IC
-- Deliberately leaky factor must be caught by truncation probe
-- Random signal must have zero net lift vs. baseline
-
-## Value proposition
-
-The toolkit's worth is not in "what I found" but in **"how deep is the well" — a credible
-measurement**. A process that can honestly tell you "there is no alpha here" is worth more than
-one that always finds something.
-
----
-
-## License & Citation
-
-This is a research toolkit built from first principles, documented for reproducibility.
-Use it to validate your own factors, not as a black-box signal generator.
-
-When citing this work in research or reports, reference the docs:
-- Methodology: docs/01-factor-checklist.md + docs/03-backtest-integrity.md
-- Case study: docs/02-case-tdx-indicator-teardown.md  
-- Pipeline: docs/04-pipeline-design.md
-
-
-### AlphaLab 风格第二阶段扩展
-
-新增 `scripts/run_staged_analysis.py` 和 `analysis/staged.py`，在真实行情上补充非重叠月度 IC、开发期因子筛选与冗余检查、等权秩组合、Fama–MacBeth、静态行业敏感性、沪指均线市场状态、交易成本与季度调仓敏感性。组合只使用 2021–2023 开发期确定，2024–2025 留作测试；测试期组合没有优于最佳单因子。完整方法、八张图和结果见 [`reports/real_data_v2/README.md`](reports/real_data_v2/README.md)。
-
-```bash
-python scripts/run_staged_analysis.py
-python scripts/make_staged_figures.py
-```
-
-当前数据仍缺历史退市/ST/停牌/涨跌停、市值、点时行业及现金分红公告，研究不能称为股息策略或可实盘回测。
+Python research code for A-share factor diagnostics. The repository includes price/volume research outputs, an offline dividend-yield and low-volatility framework, and optional walk-forward XGBoost/LightGBM code. Dividend and ML empirical results are not available until point-in-time inputs are supplied and the pipelines are run. See the Chinese sections above for setup and data requirements.
