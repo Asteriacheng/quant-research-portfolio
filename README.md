@@ -202,14 +202,14 @@ python scripts/make_figures.py
 
 ### 股息率 + 低波多因子研究（离线框架）
 
-新增不调用外部 API 的离线研究入口：先计算受公告版本日期约束的过去 12 个月已实施现金股息率，再与 60 日低波因子做固定等权秩组合。流程包括月度 Rank IC/ICIR 与 Newey–West 统计、五分组收益、单因子及联合 Fama–MacBeth、因子秩相关、年度/市场状态稳定性、公式窗口敏感性、月度调仓组合与成本情景；最后 24 个信号月作为独立测试集。行情通过本地 CSV 输入，不连接数据 API。
+新增不调用外部 API 的离线研究入口：先计算受公告版本日期约束的过去 12 个月已实施现金股息率，再与 60 日低波因子做固定等权秩组合。流程包括月度 Rank IC/ICIR 与 Newey–West 统计、五分组收益、单因子及联合 Fama–MacBeth、因子秩相关、年度/市场状态稳定性、公式窗口敏感性、月度与季度调仓对比及成本情景；最后 24 个信号月作为独立测试集。行情通过本地 CSV 输入，不连接数据 API。
 
 ```bash
 python scripts/run_dividend_multifactor.py
 python scripts/make_dividend_figures.py
 ```
 
-字段规范与空白模板见 [data/templates/README.md](data/templates/README.md)，方法、限制和当前数据缺口见 [reports/dividend_multifactor/README.md](reports/dividend_multifactor/README.md)。实现位于 `factors/dividend_factors.py`、`factors/risk_factors.py`、`analysis/dividend_multifactor.py`、`scripts/run_dividend_multifactor.py`。目前没有点时分红事件版本和未复权行情输入，所以没有生成股息因子的实证结果；不要把框架或测试数据当成市场结论。2025 年 12 月的信号需 2026 年 1 月数据才能生成完整下期收益标签。
+字段规范与空白模板见 [data/templates/README.md](data/templates/README.md)，方法、限制和当前数据缺口见 [reports/dividend_multifactor/README.md](reports/dividend_multifactor/README.md)。实现位于 `factors/dividend_factors.py`、`factors/risk_factors.py`、`analysis/dividend_multifactor.py`、`scripts/run_dividend_multifactor.py`。目前没有点时分红事件版本和未复权行情输入，所以没有生成股息因子的实证结果；不要把框架或测试数据当成市场结论。2025 年 12 月信号的月度标签需 2026 年 1 月行情，季度敏感性需数据延伸至 2026 年 3 月。
 
 <a name="english"></a>
 
