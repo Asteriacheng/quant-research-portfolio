@@ -85,8 +85,8 @@ python scripts/run_dividend_multifactor.py
 python scripts/make_dividend_figures.py
 ```
 
-Signals cover 2021–2025, with the final 24 signal months reserved for testing. Complete quarterly-frequency sensitivity requires price data through March 2026. If the versioned dividend history or raw prices are missing, the runner stops without generating market results.  
-信号区间为 2021–2025，最后 24 个信号月留作测试。完整的季度调仓敏感性需要截至 2026 年 3 月的行情。缺少分红公告版本历史或未复权价格时，脚本会停止，不会生成市场结果。
+**Date design (as of 16 October 2026).** The study uses the latest five complete calendar years, 2021–2025: 36 development signal months (January 2021–December 2023) and a pre-reserved 24-month test (January 2024–December 2025). We exclude 2026 year-to-date because it is not a complete calendar year. Monthly labels require prices through January 2026; the full quarterly-frequency sensitivity requires prices through March 2026 to complete the December 2025 signal's three-month holding period. Signal dates and the split are fixed in the runner for reproducibility. If versioned dividend history or raw prices are missing, it stops without generating market results.  
+**日期設計（截至 2026 年 10 月 16 日）：** 研究採用最近五個完整年度，即 2021–2025 年：開發期 36 個信號月（2021 年 1 月至 2023 年 12 月），以及預先保留的 24 個月測試期（2024 年 1 月至 2025 年 12 月）。2026 年尚未結束，因此不納入本輪完整年度樣本。月度收益標籤需要行情截至 2026 年 1 月；完整季度調倉敏感性則需要行情截至 2026 年 3 月，以完成 2025 年 12 月信號後的三個月持有期。腳本固定信號區間與切分點以便復現。缺少分紅公告版本歷史或未復權價格時，腳本會停止，不會生成市場結果。
 
 ## Limitations / 研究限制
 
