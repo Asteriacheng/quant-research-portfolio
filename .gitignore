@@ -139,3 +139,6 @@ data/raw/astock/CLONE_CONFIG.txt
 data/manual_dividend/*.csv
 
 data/manual_ml/*.csv
+data/manual_ml_snapshot/*.csv
+reports/ml_snapshot_exploratory/*_predictions.csv
+reports/ml_snapshot_exploratory/kmeans_test_assignments.csv

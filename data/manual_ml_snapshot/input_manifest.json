@@ -1,0 +1,49 @@
+{
+  "source": "https://github.com/newbiestring-lang/astock",
+  "source_commit": "0babe4cf6c1a175c6b84add10803b4b1f9c6000c",
+  "source_retrieved_at_utc": "2026-10-16T15:51:22.402726+00:00",
+  "source_ohlc_adjustment": "forward-adjusted; not raw executable prices",
+  "universe": "securities present in the source snapshot; survivorship and historical membership are not resolved",
+  "development_signal_period": [
+    "2021-01",
+    "2023-12"
+  ],
+  "reserved_test_signal_period": [
+    "2024-01",
+    "2025-12"
+  ],
+  "execution_label": "next calendar month's first common trading-session open to last common trading-session open, from source adjusted open prices",
+  "features": {
+    "momentum_5d": "close[t]/close[t-5]-1",
+    "momentum_20d": "close[t]/close[t-20]-1",
+    "momentum_60d": "close[t]/close[t-60]-1",
+    "momentum_12_1": "close[t-21]/close[t-252]-1",
+    "reversal_5d": "-momentum_5d",
+    "low_volatility_20d": "negative 20-session standard deviation of daily close returns; minimum 15",
+    "low_volatility_60d": "negative 60-session standard deviation of daily close returns; minimum 45",
+    "volume_stability_20d": "-20-session std(volume)/mean(volume); minimum 15",
+    "low_turnover_20d": "negative 20-session mean source turnover field; minimum 15",
+    "amihud_liquidity_20d": "-1e6 * 20-session mean(abs(daily return)/amount); minimum 15"
+  },
+  "row_count": 272937,
+  "codes": 4902,
+  "signals": 60,
+  "labeled_rows": 272926,
+  "unlabeled_rows": 11,
+  "factors_sha256": "fcecc6f6bc5607072015884001fe3f003f03f640949f5ad59907236a62191b8a",
+  "returns_sha256": "2caea65200580a411ad2f9da1cf8d92beccdeac2cf7d4cf8a2c6a1b30e3eecc2",
+  "limitations": [
+    "no dividends or announcement-version history",
+    "no point-in-time historical universe or delisted-name recovery",
+    "no historical ST, industry, size, or limit-trading status",
+    "forward-adjusted price history can embed later corporate-action adjustments; results are exploratory only"
+  ],
+  "requested_signal_window": [
+    "2021-01-01",
+    "2025-12-31"
+  ],
+  "actual_month_end_signal_range": [
+    "2021-01-29",
+    "2025-12-31"
+  ]
+}

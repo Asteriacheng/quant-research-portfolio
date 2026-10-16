@@ -1,0 +1,13 @@
+check,passed,observed,expected,notes
+01_pinned_source_commit,True,0babe4cf6c1a175c6b84add10803b4b1f9c6000c,0babe4cf6c1a175c6b84add10803b4b1f9c6000c,Reproduces the exact GitHub source revision.
+02_raw_partitions_present,True,6,6,Six documented daily-price partitions are expected.
+03_required_daily_schema,True,"amount,close,code,date,high,low,open,pctChg,turn,volume","amount,close,code,date,high,low,open,pctChg,turn,volume",All required source fields exist.
+04_daily_key_unique,True,0,0,Daily code/date keys must be unique.
+05_daily_coverage_for_labels,True,2020-06-01..2026-04-17,at least 2020-06..2026-01,Includes feature warm-up and the final 2025-12 signal's January 2026 label.
+06_six_digit_security_codes,True,5608,all codes are six digits,Code strings are normalized without numeric coercion.
+07_universe_size,True,5608,>=1000,"Coverage is broad, though the snapshot is not PIT-complete."
+08_positive_and_ordered_ohlc,True,positive=True; high_low_bounds=True,positive OHLC; candle bounds within 0.001 CNY float-rounding tolerance,Checks price domain and candle consistency on available rows.
+09_expected_missing_daily_values_documented,True,22292,missing cells counted; suspensions/missing records are not forward-filled,"Missing observations are preserved, not imputed into the raw source."
+10_monthly_factor_key_unique,True,0,0,Both monthly files must have unique date/code keys.
+11_five_year_signal_months,True,60 months: 2021-01..2025-12,60 months from 2021-01 through 2025-12,The final 24 signal months are reserved for testing.
+12_label_coverage_and_feature_separation,True,272926/272937 labels; features=10,>=99.9% labels; no forward_return in factors.csv,Labels remain in their own file and are aligned by date/code.

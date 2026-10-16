@@ -1,0 +1,62 @@
+{
+  "split_date": "2024-01-01",
+  "regression_models": [
+    "xgboost",
+    "lightgbm"
+  ],
+  "features": [
+    "momentum_5d",
+    "momentum_20d",
+    "momentum_60d",
+    "momentum_12_1",
+    "reversal_5d",
+    "low_volatility_20d",
+    "low_volatility_60d",
+    "volume_stability_20d",
+    "low_turnover_20d",
+    "amihud_liquidity_20d"
+  ],
+  "target": "next-period return for regression; above same-month cross-sectional median for RF classification",
+  "random_forest_settings": {
+    "n_estimators": 20,
+    "n_jobs": -1,
+    "max_depth": 5,
+    "min_samples_leaf": 15,
+    "max_features": 0.7
+  },
+  "rank_baseline": "equal-weight mean of within-month percentile ranks; feature directions must be pre-specified",
+  "portfolio_cost_bps": {
+    "commission_each_side": 3,
+    "slippage_each_side": 10,
+    "sell_stamp_before_2023_08_28": 10,
+    "sell_stamp_after_2023_08_28": 5
+  },
+  "frontier": {
+    "status": "run",
+    "prediction_source": "xgboost",
+    "max_weight": 0.1,
+    "risk_aversion": 4.0,
+    "covariance": "Ledoit-Wolf shrinkage of up to 36 prior realized monthly returns",
+    "minimum_history_months": 12
+  },
+  "data_caveat": "Inputs are not checked for source accuracy, survivorship, delistings, or point-in-time corporate actions by this runner.",
+  "garch": "not_requested",
+  "feature_addition_order": {
+    "add_low_volatility": [
+      "low_volatility_20d",
+      "low_volatility_60d"
+    ],
+    "add_price_volume": [
+      "low_volatility_20d",
+      "low_volatility_60d",
+      "momentum_5d",
+      "momentum_20d",
+      "momentum_60d",
+      "momentum_12_1",
+      "reversal_5d",
+      "volume_stability_20d",
+      "low_turnover_20d",
+      "amihud_liquidity_20d"
+    ]
+  }
+}

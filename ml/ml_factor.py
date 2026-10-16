@@ -116,9 +116,10 @@ def _fit_transform(train: pd.DataFrame, other: pd.DataFrame,
 
 
 def _date_ic(frame: pd.DataFrame, prediction_col: str = "prediction") -> float:
-    if len(frame) < 3:
+    sample = frame[[prediction_col, "forward_return"]].dropna()
+    if len(sample) < 3:
         return float("nan")
-    result = spearmanr(frame[prediction_col], frame["forward_return"]).statistic
+    result = spearmanr(sample[prediction_col], sample["forward_return"]).statistic
     return float(result) if np.isfinite(result) else float("nan")
 
 
@@ -251,7 +252,7 @@ def walk_forward_predict(
             prior_dates = prior_dates[-train_months:]
         train = panel.loc[panel.index.get_level_values("date").isin(prior_dates)]
         train = train.dropna(subset=["forward_return"])
-        current = panel.loc[panel.index.get_level_values("date").eq(date)]
+        current = panel.loc[panel.index.get_level_values("date") == date]
         if len(train) < min_train_rows or current.empty:
             continue
         x_train, x_current = _fit_transform(train, current, feature_cols)
@@ -274,5 +275,6 @@ def walk_forward_predict(
     pred["date"] = pd.to_datetime(pred.date)
     ic_rows = []
     for date, group in pred.groupby("date"):
-        ic_rows.append({"date": date, "rank_ic": _date_ic(group), "n_stocks": len(group)})
+        valid = group.dropna(subset=["prediction", "forward_return"])
+        ic_rows.append({"date": date, "rank_ic": _date_ic(valid), "n_stocks": len(valid)})
     return pred, pd.DataFrame(ic_rows), pd.DataFrame(importances), validation

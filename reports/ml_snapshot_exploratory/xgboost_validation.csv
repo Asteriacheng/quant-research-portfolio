@@ -1,0 +1,3 @@
+config_id,model_type,params,mean_validation_rank_ic,validation_months_scored,selected
+0,xgboost,"{'max_depth': 2, 'learning_rate': 0.05, 'n_estimators': 80, 'subsample': 0.8, 'colsample_bytree': 0.8, 'reg_lambda': 1.0}",0.13351568271538602,12,True
+1,xgboost,"{'max_depth': 3, 'learning_rate': 0.03, 'n_estimators': 120, 'subsample': 0.8, 'colsample_bytree': 0.8, 'reg_lambda': 2.0}",0.13216272622361333,12,False

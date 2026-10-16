@@ -1,0 +1,2 @@
+# Optional conventional time-series model; independent of the ML dependencies.
+arch>=7.0
