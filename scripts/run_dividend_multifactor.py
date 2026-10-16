@@ -33,6 +33,8 @@ OUT = ROOT / "reports" / "dividend_multifactor"
 PRICE_FILE = INPUT / "prices_daily.csv"
 EVENT_FILE = INPUT / "dividend_events.csv"
 BENCHMARK_FILE = INPUT / "benchmark_daily.csv"
+# Frozen as of 2026-10-16: latest five complete calendar years; 2026 YTD is excluded.
+# Development: 2021-01..2023-12 (36 months); reserved test: 2024-01..2025-12 (24 months).
 SIGNAL_START, SIGNAL_END = "2021-01-01", "2025-12-31"
 
 
@@ -282,7 +284,11 @@ def main() -> None:
         pd.concat(backtest_summaries, ignore_index=True).to_csv(OUT / "backtest_summary.csv", index=False)
     metadata = {
         "data_mode": "manual offline CSV; no provider API called",
+        "reference_date": "2026-10-16",
+        "window_basis": "latest five complete calendar years as of reference_date; exclude incomplete 2026 YTD",
         "signal_window": [SIGNAL_START, SIGNAL_END],
+        "development_window": ["2021-01-01", "2023-12-31"],
+        "reserved_test_window": ["2024-01-01", "2025-12-31"],
         "signal": "month-end close; next calendar month first open entry; January 2026 prices complete the December 2025 label",
         "label": "next calendar month last open plus cash dividends with ex-date during holding interval",
         "dividend_factor": "trailing 365-day implemented cash per share known by signal / raw close",
@@ -291,7 +297,7 @@ def main() -> None:
         "development": "signals before 2024-01-01",
         "reserved_test_start": str(split_date.date()),
         "reserved_test": "last 24 observed signal months; rule fixed without inspecting outcomes",
-        "frequency_sensitivity": "quarter-end signals, hold next three full calendar months, same fixed top-quintile rule; requires data through March 2026",
+        "frequency_sensitivity": "quarter-end signals, hold next three full calendar months, same fixed top-quintile rule; requires data through 2026-03-31",
         "factor_selection_and_weights": "none selected from test; equal ranks fixed before test",
         "cost_scenarios": "commission 3bp per side; slippage 5/10/20bp per side; sell tax 10bp before 2023-08-28 then 5bp",
         "input_rows": int(len(prices)),
