@@ -11,9 +11,14 @@ Prices must be unadjusted raw prices (CNY/share); `date` is the exchange trading
 signals and the following holding period. Do not replace missing suspensions with
 forward-filled prices. The current `astock` snapshot is forward-adjusted and is not a
 substitute for `open_raw` / `close_raw` in dividend-yield or cash-distribution accounting.
-For the five-year 2021–2025 signal window, include prices through March 2026 so the
-December 2025 signal has both a complete next-month label and a complete next-quarter
-label for the frequency-sensitivity test. Signals are formed only through 2025-12-31.
+As of 2026-10-16, the latest five complete calendar years are 2021–2025. Include
+prices from at least 2020-01-01 (for the first trailing-365-day dividend window) through
+2026-03-31. The 36 development signal months are 2021-01 through 2023-12; the final
+24 test signal months are 2024-01 through 2025-12. Monthly labels need January 2026
+prices. Full quarterly-frequency sensitivity needs March 2026 prices to finish the
+three-month holding period after the December 2025 signal. Do not extend signals into
+2026 year-to-date in this frozen study version; that year is incomplete. Signals are
+formed only through 2025-12-31.
 
 ## `dividend_events.csv`
 
