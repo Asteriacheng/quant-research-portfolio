@@ -11,8 +11,8 @@ This repository contains Python tools for factor diagnostics, A-share price/volu
   `factors/`：价量、股息率和低波因子计算。
 - `analysis/`: portfolio sorts, Fama–MacBeth regressions, cost scenarios, and multifactor diagnostics.  
   `analysis/`：分组收益、Fama–MacBeth 回归、成本情景和多因子诊断。
-- `ml/`: optional XGBoost / LightGBM walk-forward model.  
-  `ml/`：可选的 XGBoost / LightGBM 滚动训练模型。
+- `ml/`: optional walk-forward regression/classification, clustering diagnostics, and portfolio optimization.
+  `ml/`：可选的滚动回归/分类、聚类诊断和组合优化。
 - `scripts/`: runnable research and chart-generation scripts.  
   `scripts/`：研究运行和图表生成脚本。
 - `data/templates/`: offline dividend-study input schemas.  
@@ -30,8 +30,8 @@ This repository contains Python tools for factor diagnostics, A-share price/volu
 **Dividend yield and low volatility.** The code calculates a point-in-time trailing cash yield and low-volatility signal, then provides rank combination, IC, quintile, Fama–MacBeth, cost, and rebalance-frequency analyses. The repository does not contain versioned dividend-event history or unadjusted prices, so this study has no empirical results yet.  
 **股息率与低波：** 代码实现了点时现金股息率和低波信号，并提供秩组合、IC、五分组、Fama–MacBeth、成本及调仓频率分析。仓库尚无分红公告版本历史和未复权价格，因此这部分还没有实证结果。
 
-**Machine learning.** The optional XGBoost / LightGBM pipeline selects settings using rolling validation before the holdout, freezes those settings, and generates monthly walk-forward predictions with Rank IC and feature-importance outputs. No factor panel has been supplied and no model-performance result has been generated. See [the ML instructions](docs/machine_learning.md).  
-**机器学习：** 可选的 XGBoost / LightGBM 流程使用留出期之前的滚动验证选择参数，在留出期固定参数并逐月预测，输出 Rank IC 和特征重要性。目前尚无输入因子面板，也没有模型表现结果。运行说明见[机器学习文档](docs/machine_learning.md)。
+**Machine learning and statistical analysis.** The experiment runner compares a fixed random-forest classifier with progressively added feature groups, Ridge, XGBoost, LightGBM, and an equal-weight rank baseline on the same holdout months. K-means is an unsupervised diagnostic. IC, AUC/Brier, portfolio sorts, and GARCH volatility forecasts are reported as statistical/time-series analyses; mean-variance frontier construction is portfolio optimization, not machine learning. No point-in-time dividend panel has been supplied, so these additions do not yet produce real dividend-strategy results. See [the ML instructions](docs/machine_learning.md).
+**机器学习与统计分析：** 实验脚本在相同留出月份比较逐步增加特征组的随机森林分类、Ridge、XGBoost、LightGBM，以及等权秩基准。K-means 是无监督诊断。IC、AUC/Brier、分组收益和 GARCH 波动率预测分别作为统计或时间序列分析报告；均值—方差有效前沿属于组合优化，不是机器学习。目前没有点时股息因子面板，因此这些代码尚未产生真实股息策略结果。详见[机器学习文档](docs/machine_learning.md)。
 
 ## Setup and tests / 环境与测试
 
@@ -43,8 +43,8 @@ pip install pandas numpy scipy
 python -m unittest discover -s tests -t .
 ```
 
-The current suite has 36 tests covering calculations and time-split behavior. Passing unit tests checks code behavior; it does not establish that a factor works in the market.  
-当前共有 36 项单元测试，覆盖计算逻辑和时间切分。测试通过只说明代码行为符合预期，不代表因子在真实市场有效。
+The current suite has 41 tests covering calculations and time-split behavior. Passing unit tests checks code behavior; it does not establish that a factor works in the market.
+当前共有 41 项单元测试，覆盖计算逻辑和时间切分。测试通过只说明代码行为符合预期，不代表因子在真实市场有效。
 
 Machine-learning libraries are optional. Install them only if you plan to run that pipeline:
 机器学习库为可选依赖；需要运行 ML 流程时再安装：
@@ -63,17 +63,20 @@ Prepare local CSV files; files under `data/manual_ml/` are ignored by Git:
 - `forward_returns.csv`: one row per `date,code` with a `forward_return` label that starts after the signal can be traded.  
   `forward_returns.csv`：每个 `date,code` 一行，包含 `forward_return`；收益区间必须从信号之后可成交的价格开始。
 
-Run the model:
-运行模型：
+Run the comparison suite:
+运行模型比较：
 
 ```bash
-python scripts/run_ml_factor.py --model xgboost --split-date 2024-01-01
-# Or use --model lightgbm
-# 也可以将模型设为 lightgbm
+python scripts/run_ml_experiments.py --regression-model both --split-date 2024-01-01
+# Or run one tree model with --regression-model xgboost or lightgbm
+# 也可将参数改为 xgboost 或 lightgbm 只运行一种树模型
 ```
 
-The script reads from `data/manual_ml/` and writes predictions, monthly Rank IC, quintile returns, a costed portfolio, feature importance, parameter-selection scores, and run metadata to `reports/ml_factor/`.  
-脚本从 `data/manual_ml/` 读取数据，并将预测值、月度 Rank IC、五分组收益、含成本组合、特征重要性、参数选择结果和运行信息写入 `reports/ml_factor/`。
+The script reads from `data/manual_ml/` and writes model predictions and comparisons, classification metrics, cluster assignments, portfolio returns, frontier diagnostics, and run metadata to `reports/ml_experiments/`.
+脚本从 `data/manual_ml/` 读取数据，并将模型预测与比较、分类指标、聚类结果、组合收益、有效前沿诊断和运行信息写入 `reports/ml_experiments/`。
+
+An optional `sentiment_score` may be supplied as another factor only when it has a documented historical source, timestamp, and release-time rule. This repository does not download archived social-media data or synthesize sentiment observations.
+只有在历史来源、时间戳和可用时点规则都有记录时，才可将 `sentiment_score` 作为额外因子输入。本仓库不会下载社交媒体历史数据，也不会合成情绪观测值。
 
 ## Run the dividend study / 运行股息研究
 
