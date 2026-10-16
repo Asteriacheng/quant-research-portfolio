@@ -131,7 +131,11 @@ def main() -> None:
     parser.add_argument("--input-dir", type=Path, default=ROOT / "data" / "manual_ml")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "reports" / "ml_experiments")
     parser.add_argument("--split-date", default="2024-01-01")
-    parser.add_argument("--regression-model", choices=("xgboost", "lightgbm", "both"), default="both")
+    parser.add_argument("--regression-model", choices=("xgboost", "lightgbm", "both", "none"), default="both")
+    parser.add_argument("--rf-estimators", type=int, default=300,
+                        help="number of trees per monthly Random Forest fit (default: 300)")
+    parser.add_argument("--rf-jobs", type=int, default=1,
+                        help="parallel workers for each Random Forest fit (default: 1; -1 uses all cores)")
     parser.add_argument("--market-returns", type=Path,
                         help="optional date,market_return CSV to add a GARCH(1,1) market-regime feature")
     args = parser.parse_args()
@@ -154,8 +158,9 @@ def main() -> None:
 
     # Main regression model, plus fixed ridge and cross-sectional rank baselines.
     models = {}
-    regression_models = (["xgboost", "lightgbm"] if args.regression_model == "both"
-                         else [args.regression_model])
+    regression_models = ([] if args.regression_model == "none" else
+                         (["xgboost", "lightgbm"] if args.regression_model == "both"
+                          else [args.regression_model]))
     regressions = {}
     for model_name in regression_models:
         regression, monthly_ic, importance, tuning = walk_forward_predict(
@@ -180,16 +185,21 @@ def main() -> None:
 
     rf_metric_tables = []
     portfolio_summaries = []
+    monthly_portfolios = {}
     for step_name, selected_features in progressive_feature_sets(features).items():
-        rf = walk_forward_random_forest(panel, selected_features, args.split_date)
+        rf = walk_forward_random_forest(panel, selected_features, args.split_date,
+                                        n_estimators=args.rf_estimators,
+                                        n_jobs=args.rf_jobs)
         rf.to_csv(args.output_dir / f"random_forest_{step_name}_predictions.csv", index=False)
         rf_metrics = summarize_rf(rf)
         rf_metrics.insert(0, "feature_step", step_name)
         rf_metrics["features"] = ",".join(selected_features)
         rf_metric_tables.append(rf_metrics)
         score = prediction_pivot(rf, "probability_above_median")
-        rf_score, rf_summary = monthly_long_only_backtest(score, realized,
-                                                           test_start=args.split_date)
+        rf_monthly, rf_summary = monthly_long_only_backtest(score, realized,
+                                                             test_start=args.split_date)
+        monthly_portfolios[f"random_forest_{step_name}"] = rf_monthly.copy()
+        rf_score = rf_monthly
         rf_score.insert(0, "model", f"random_forest_{step_name}")
         rf_summary.insert(0, "model", f"random_forest_{step_name}")
         rf_score.to_csv(args.output_dir / f"portfolio_random_forest_{step_name}.csv", index=False)
@@ -200,6 +210,7 @@ def main() -> None:
     for name, score in models.items():
         monthly, summary = monthly_long_only_backtest(score, realized,
                                                        test_start=args.split_date)
+        monthly_portfolios[name] = monthly.copy()
         monthly.insert(0, "model", name)
         summary.insert(0, "model", name)
         monthly.to_csv(args.output_dir / f"portfolio_{name}.csv", index=False)
@@ -207,15 +218,40 @@ def main() -> None:
     pd.concat(portfolio_summaries, ignore_index=True).to_csv(
         args.output_dir / "model_comparison.csv", index=False)
 
+    # Also give every model an identical complete-month sample. Individual
+    # summaries above retain each model's full available sample and can differ
+    # in month count when a selected name lacks an observed label.
+    common_net = pd.concat({name: monthly.set_index("signal_month").net_return
+                            for name, monthly in monthly_portfolios.items()}, axis=1)
+    common_net = common_net.loc[common_net.index >= pd.Timestamp(args.split_date)].dropna(how="any")
+    common_rows = []
+    for name in common_net.columns:
+        r = common_net[name]
+        wealth = (1.0 + r).cumprod()
+        vol = float(r.std(ddof=1) * np.sqrt(12)) if len(r) > 1 else np.nan
+        common_rows.append({"model": name, "period": "common_test_months",
+                            "months": len(r), "cumulative_net_return": float(wealth.iloc[-1] - 1.0),
+                            "annualized_net_return": float(wealth.iloc[-1] ** (12.0 / len(r)) - 1.0),
+                            "annualized_volatility": vol,
+                            "max_drawdown": float((wealth / wealth.cummax() - 1.0).min()),
+                            "sharpe_zero_rf": float(r.mean() * 12.0 / vol) if np.isfinite(vol) and vol > 0 else np.nan})
+    pd.DataFrame(common_rows).to_csv(args.output_dir / "common_sample_comparison.csv", index=False)
+
     cluster_rows, cluster_summaries = monthly_kmeans_diagnostics(panel, features)
     cluster_rows.loc[cluster_rows.date >= pd.Timestamp(args.split_date)].to_csv(
         args.output_dir / "kmeans_test_assignments.csv", index=False)
     cluster_summaries.loc[cluster_summaries.date >= pd.Timestamp(args.split_date)].to_csv(
         args.output_dir / "kmeans_test_summary.csv", index=False)
 
-    frontier_model = "xgboost" if "xgboost" in regressions else "lightgbm"
-    frontier, frontier_summary = frontier_backtest(regressions[frontier_model], panel,
-                                                    args.split_date)
+    frontier_model = "xgboost" if "xgboost" in regressions else ("lightgbm" if "lightgbm" in regressions else None)
+    if frontier_model:
+        frontier, frontier_summary = frontier_backtest(regressions[frontier_model], panel,
+                                                        args.split_date)
+    else:
+        frontier = pd.DataFrame([{"status": "skipped_no_regression_prediction",
+                                  "note": "Choose xgboost or lightgbm to supply expected-return predictions."}])
+        frontier_summary = pd.DataFrame([{"period": "test", "months": 0,
+                                          "note": "No regression prediction supplied; no frontier result generated."}])
     frontier.to_csv(args.output_dir / "efficient_frontier_monthly.csv", index=False)
     frontier_summary.to_csv(args.output_dir / "efficient_frontier_summary.csv", index=False)
     metadata = {
@@ -223,13 +259,15 @@ def main() -> None:
         "regression_models": regression_models,
         "features": features,
         "target": "next-period return for regression; above same-month cross-sectional median for RF classification",
-        "random_forest_settings": {"n_estimators": 300, "max_depth": 5,
+        "random_forest_settings": {"n_estimators": args.rf_estimators,
+                                   "n_jobs": args.rf_jobs, "max_depth": 5,
                                    "min_samples_leaf": 15, "max_features": 0.7},
         "rank_baseline": "equal-weight mean of within-month percentile ranks; feature directions must be pre-specified",
         "portfolio_cost_bps": {"commission_each_side": 3, "slippage_each_side": 10,
                                "sell_stamp_before_2023_08_28": 10,
                                "sell_stamp_after_2023_08_28": 5},
-        "frontier": {"prediction_source": frontier_model, "max_weight": 0.10, "risk_aversion": 4.0,
+        "frontier": {"status": "run" if frontier_model else "skipped_no_regression_prediction",
+                     "prediction_source": frontier_model, "max_weight": 0.10, "risk_aversion": 4.0,
                      "covariance": "Ledoit-Wolf shrinkage of up to 36 prior realized monthly returns",
                      "minimum_history_months": 12},
         "data_caveat": "Inputs are not checked for source accuracy, survivorship, delistings, or point-in-time corporate actions by this runner.",

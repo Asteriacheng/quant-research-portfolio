@@ -43,8 +43,8 @@ pip install pandas numpy scipy
 python -m unittest discover -s tests -t .
 ```
 
-The current suite has 41 tests covering calculations and time-split behavior. Passing unit tests checks code behavior; it does not establish that a factor works in the market.
-当前共有 41 项单元测试，覆盖计算逻辑和时间切分。测试通过只说明代码行为符合预期，不代表因子在真实市场有效。
+The current suite has 42 tests covering calculations and time-split behavior. Passing unit tests checks code behavior; it does not establish that a factor works in the market.
+当前共有 42 项单元测试，覆盖计算逻辑和时间切分。测试通过只说明代码行为符合预期，不代表因子在真实市场有效。
 
 Machine-learning libraries are optional. Install them only if you plan to run that pipeline:
 机器学习库为可选依赖；需要运行 ML 流程时再安装：
@@ -75,6 +75,23 @@ python scripts/run_ml_experiments.py --regression-model both --split-date 2024-0
 The script reads from `data/manual_ml/` and writes model predictions and comparisons, classification metrics, cluster assignments, portfolio returns, frontier diagnostics, and run metadata to `reports/ml_experiments/`.
 脚本从 `data/manual_ml/` 读取数据，并将模型预测与比较、分类指标、聚类结果、组合收益、有效前沿诊断和运行信息写入 `reports/ml_experiments/`。
 
+**Public-snapshot example.** To run the exploratory ML case on the repository's pinned public price/volume snapshot, install both dependency sets, fetch the files, build the monthly panel, validate it, then run the pre-fixed model suite:
+**公开快照示例。** 如需在仓库固定版本的公开价量快照上运行探索性 ML 案例，安装两组依赖、下载行情、构建月度面板并完成质量检查，再运行预设模型：
+
+```bash
+pip install -r requirements-real.txt
+pip install -r requirements-ml.txt
+python data/fetch_real_data.py
+python scripts/build_ml_inputs_from_snapshot.py
+python scripts/check_ml_snapshot_data.py
+python scripts/run_ml_experiments.py --input-dir data/manual_ml_snapshot \
+  --output-dir reports/ml_snapshot_exploratory --regression-model both \
+  --rf-estimators 20 --rf-jobs -1 --split-date 2024-01-01
+```
+
+The run summary is in [`reports/ml_snapshot_exploratory/README.md`](reports/ml_snapshot_exploratory/README.md). It covers 2021–2025 monthly signals with 2024–2025 reserved, uses the same 22 complete test months for the model comparison, and reports the source hashes and 12 integrity checks. Because the snapshot has forward-adjusted prices and no point-in-time universe or historical dividend revisions, these are exploratory price/volume diagnostics, not dividend-strategy or executable backtest results.
+运行结果见[`reports/ml_snapshot_exploratory/README.md`](reports/ml_snapshot_exploratory/README.md)。信号覆盖 2021–2025，2024–2025 预留为测试期；模型比较使用相同的 22 个完整测试月，并记录源数据哈希和 12 项质量检查。由于快照使用前复权行情，且缺少点时股票池和历史分红修订，这些结果只是价量探索诊断，不是股息策略或可执行回测结果。
+
 An optional `sentiment_score` may be supplied as another factor only when it has a documented historical source, timestamp, and release-time rule. This repository does not download archived social-media data or synthesize sentiment observations.
 只有在历史来源、时间戳和可用时点规则都有记录时，才可将 `sentiment_score` 作为额外因子输入。本仓库不会下载社交媒体历史数据，也不会合成情绪观测值。
 
@@ -93,5 +110,5 @@ python scripts/make_dividend_figures.py
 
 ## Limitations / 研究限制
 
-The available data and scripts do not yet cover historical universe membership and delistings, ST/suspension/limit-price execution, point-in-time industry and size controls, or publication-date-safe accounting factors. The ML module is implemented but has not been run on real factor inputs. No unobserved strategy return or performance claim is made.  
-现有数据和代码尚未覆盖历史股票池及退市处理、ST/停牌/涨跌停成交、点时行业和市值控制，以及按公告日期构建的财务因子。机器学习模块已实现，但还没有用真实因子数据运行。本文档不声称存在尚未验证的策略收益或业绩。
+The exploratory ML suite has been run on real price/volume data, but the dataset cannot establish a point-in-time dividend strategy. Historical membership and delistings, ST/suspension/limit-price execution, point-in-time industry and size controls, and versioned dividend announcements remain unavailable. The 22-month common test result is not a trading claim.
+探索性 ML 流程已在真实价量数据上运行，但该数据不能验证点时股息策略。历史股票池及退市处理、ST/停牌/涨跌停成交、点时行业和市值控制、分红公告版本仍未补齐。共同样本的 22 个月结果不代表可交易业绩。

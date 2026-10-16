@@ -1,0 +1,2 @@
+period,months,cumulative_return,annualized_return,annualized_volatility,max_drawdown,sharpe_zero_rf,mean_one_way_turnover
+test,24,0.18836309136404839,0.09012067743165408,0.34311172814759777,-0.19816988128863122,0.40874833647826364,0.8654823659650095

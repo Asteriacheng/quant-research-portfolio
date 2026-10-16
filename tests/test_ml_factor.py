@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from ml.ml_factor import (build_factor_panel, rolling_train_validation_dates,
-                          _fit_transform)
+                          _date_ic, _fit_transform)
 from ml.market_models import (cross_sectional_binary_target,
                               efficient_frontier_weights,
                               monthly_kmeans_diagnostics,
@@ -13,6 +13,11 @@ from ml.market_models import (cross_sectional_binary_target,
 
 
 class WalkForwardMLTests(unittest.TestCase):
+    def test_rank_ic_uses_only_valid_prediction_return_pairs(self):
+        sample = pd.DataFrame({"prediction": [1.0, 2.0, 3.0, np.nan],
+                               "forward_return": [0.1, 0.2, 0.3, 0.9]})
+        self.assertAlmostEqual(_date_ic(sample), 1.0)
+
     def test_build_factor_panel_aligns_features_and_target(self):
         dates = pd.date_range("2022-01-31", periods=2, freq="ME")
         codes = ["000001", "000002"]

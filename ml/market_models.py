@@ -68,6 +68,8 @@ def walk_forward_random_forest(
     min_train_rows: int = 300,
     min_names_per_month: int = 30,
     random_state: int = 42,
+    n_estimators: int = 300,
+    n_jobs: int = 1,
 ) -> pd.DataFrame:
     """Fit a fixed random-forest classifier month by month after the split.
 
@@ -110,9 +112,9 @@ def walk_forward_random_forest(
             continue
         x_train, x_current = _fit_transform(train, current, feature_cols)
         estimator = RandomForestClassifier(
-            n_estimators=300, max_depth=5, min_samples_leaf=15,
+            n_estimators=n_estimators, max_depth=5, min_samples_leaf=15,
             max_features=0.7, class_weight="balanced_subsample",
-            random_state=random_state, n_jobs=1,
+            random_state=random_state, n_jobs=n_jobs,
         )
         estimator.fit(x_train, train["_target"].astype(int).to_numpy())
         positive_col = list(estimator.classes_).index(1)

@@ -38,13 +38,32 @@ python scripts/run_ml_experiments.py --regression-model both --split-date 2024-0
 python scripts/run_ml_experiments.py --regression-model xgboost --split-date 2024-01-01 --market-returns data/manual_ml/index_returns.csv
 ```
 
+仓库附带的公开价量快照可生成一个**探索性**机器学习案例（数据需先下载，原始文件和月度输入 CSV 均保留在本地、不提交到 Git）：
+
+```bash
+pip install -r requirements-real.txt
+pip install -r requirements-ml.txt
+python data/fetch_real_data.py
+python scripts/build_ml_inputs_from_snapshot.py
+python scripts/check_ml_snapshot_data.py
+python scripts/run_ml_experiments.py --input-dir data/manual_ml_snapshot \
+  --output-dir reports/ml_snapshot_exploratory --regression-model both \
+  --rf-estimators 20 --rf-jobs -1 --split-date 2024-01-01
+```
+
+此案例的月度信号为 2021–2025，开发期为 2021–2023，测试期为 2024–2025。脚本仅从前复权 OHLCV 快照构造价量特征和下月首个共同交易日开盘至月末共同交易日开盘的标签；`input_manifest.json` 保存来源提交、检索时间、公式、覆盖行数和文件哈希。十二项数据检查写入 `reports/ml_snapshot_exploratory/data_quality_checks.csv`，已执行结果见同目录的报告。当前股票列表造成的幸存者偏差、缺少历史 ST/退市/停牌信息，以及无法把分红收益与价格调整分离，都会影响解释。因此这只能用于检验 ML 管线，不能替代点时股息因子研究或可成交策略回测。本次使用 20 棵随机森林树以控制本地运行时间；默认参数仍是 300 棵。
+
+macOS 上 XGBoost 和 LightGBM 可能还需要 OpenMP 运行库 `libomp`；若本机尚未安装，可先运行随机森林、Ridge 和 K-means：将 `--regression-model` 设为 `none`。此时有效前沿需要预期收益模型输入，因此会在元数据中明确标记为跳过。
+
 The optional file must contain one row per date with columns `date,market_return`, where returns are decimals. The GARCH feature uses observations through each signal date and forecasts volatility over the following 21 sessions. Install its separate dependency with `pip install -r requirements-garch.txt`.
 可选文件每个日期一行，包含 `date,market_return`，收益率使用小数格式。GARCH 特征使用截至各信号日的数据，预测之后 21 个交易日的波动率。使用前另行安装 `pip install -r requirements-garch.txt`。
 
 脚本默认从 `data/manual_ml/` 读取输入，将文件写到 `reports/ml_experiments/`。默认同时运行 XGBoost 和 LightGBM；也可以只选其中一个。输出包括模型预测、逐月 Rank IC、随机森林分类指标、K-means 簇分布、等权秩/Ridge/随机森林/两种 boosting 模型的同月组合比较，以及基于 XGBoost 预测的有效前沿组合结果。组合使用佣金单边 3bp、滑点单边 10bp、卖出印花税 2023-08-28 前 10bp、此后 5bp 的假设。当前输入模板没有基准指数收益，策略比较是相对因子/模型基准的绝对收益比较，不是相对市场指数的超额收益。
 
+本次运行结果和实证限制见 [`reports/ml_snapshot_exploratory/README.md`](../reports/ml_snapshot_exploratory/README.md)。macOS 若导入 XGBoost/LightGBM 时提示缺少 `libomp`，需为本机 Python 安装 OpenMP 运行库；当前数据集和模型都只在本地计算，不调用行情 API。
+
 ## 当前状态与限制
 
-运行器不会自动下载行情。仓库中的公开行情快照只包含价格和成交字段，且使用当前股票列表，不能单独满足点时分红收益率、历史股票池及退市处理要求。因此目前没有真实股息因子机器学习结果；运行缺少输入时会停止并提示，不会生成虚构表现。请先按下列格式准备真实面板，再启动研究。2021–2023 的开发期较短，参数网格已保持精简；测试期只用于一次最终比较。
+运行器不会自动下载行情。公开快照上的价量 ML 已生成探索性结果，但数据只包含价格和成交字段，且使用当前股票列表，不能支持点时分红收益率、历史股票池及退市处理。因此目前没有真实股息因子机器学习结果；运行器缺少输入时会停止提示，不会生成虚构表现。2021–2023 的开发期较短，参数网格已保持精简；测试期只用于一次最终比较。
 
 这个流程不处理停牌、涨跌停成交、退市收益、历史 ST 状态或历史行业/市值中性。K-means 是描述性分析，Frontier 使用短历史估计，RF 的分类准确率也不是交易收益，GARCH 预测波动率也不代表收益预测。它是研究脚本，不是实盘交易系统。
